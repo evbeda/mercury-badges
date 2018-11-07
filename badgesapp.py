@@ -9,6 +9,7 @@ import sys
 from zebra import zebra
 import pickle
 import requests
+import logging
 try:
     import Tkinter as tk
 except ImportError:
@@ -23,31 +24,38 @@ except ImportError:
 
 import badgesapp_support
 
+
 def vp_start_gui():
     '''Starting point when module is the main routine.'''
     global val, w, root
     root = tk.Tk()
-    top = Application (root)
+    top = Application(root)
     badgesapp_support.init(root, top)
     root.mainloop()
 
+
 w = None
+
+
 def create_Application(root, *args, **kwargs):
     '''Starting point when module is imported by another program.'''
     global w, w_win, rt
     rt = root
-    w = tk.Toplevel (root)
-    top = Application (w)
+    w = tk.Toplevel(root)
+    top = Application(w)
     badgesapp_support.init(w, top, *args, **kwargs)
     return (w, top)
+
 
 def destroy_Application():
     global w
     w.destroy()
     w = None
 
+
 def get_printer_list(zebra):
     return zebra.getqueues()
+
 
 class Application:
     def __init__(self, top=None):
@@ -72,8 +80,12 @@ class Application:
         top.configure(highlightcolor="black")
 
         self.PrinterSelectionCanvas = tk.Canvas(top)
-        self.PrinterSelectionCanvas.place(relx=0.008, rely=0.013, relheight=0.975
-                , relwidth=0.983)
+        self.PrinterSelectionCanvas.place(
+            relx=0.008,
+            rely=0.013,
+            relheight=0.975,
+            relwidth=0.983,
+        )
         self.PrinterSelectionCanvas.configure(background="#F8F7FA")
         self.PrinterSelectionCanvas.configure(highlightbackground="#d9d9d9")
         self.PrinterSelectionCanvas.configure(highlightcolor="black")
@@ -82,12 +94,30 @@ class Application:
         self.PrinterSelectionCanvas.configure(selectforeground="black")
         self.PrinterSelectionCanvas.configure(width=283)
 
+        self.log_label = tk.Text(self.PrinterSelectionCanvas)
+        self.wl = WidgetLogger(self.log_label)
+        self.log_label.place(
+            relx=0.034,
+            rely=0.564,
+            height=144,
+            width=415,
+        )
+        self.log_label.configure(background="#ffffff")
+        self.log_label.configure(foreground="#000000")
+        self.log_label.configure(highlightbackground="#d9d9d9")
+        self.log_label.configure(highlightcolor="black")
+        self.log_label.configure(state=tk.DISABLED)
+
         self.printer_radio_buttons = []
         self.populate_radio_buttons()
 
         self.choose_printer_label = tk.Label(self.PrinterSelectionCanvas)
-        self.choose_printer_label.place(relx=0.068, rely=0.077, height=24
-                , width=122)
+        self.choose_printer_label.place(
+            relx=0.068,
+            rely=0.077,
+            height=24,
+            width=122,
+        )
         self.choose_printer_label.configure(activebackground="#f9f9f9")
         self.choose_printer_label.configure(activeforeground="black")
         self.choose_printer_label.configure(background="#F8F7FA")
@@ -97,7 +127,12 @@ class Application:
         self.choose_printer_label.configure(text='''Choose a printer:''')
 
         self.disclaimer_label = tk.Label(self.PrinterSelectionCanvas)
-        self.disclaimer_label.place(relx=0.042, rely=0.949, height=7, width=221)
+        self.disclaimer_label.place(
+            relx=0.042,
+            rely=0.949,
+            height=7,
+            width=221,
+        )
         self.disclaimer_label.configure(activebackground="#f9f9f9")
         self.disclaimer_label.configure(activeforeground="black")
         self.disclaimer_label.configure(background="#F8F7FA")
@@ -105,10 +140,21 @@ class Application:
         self.disclaimer_label.configure(foreground="#000000")
         self.disclaimer_label.configure(highlightbackground="#d9d9d9")
         self.disclaimer_label.configure(highlightcolor="black")
-        self.disclaimer_label.configure(text='''Disclaimer: This app was designed to support only Zebra printers.''')
+        self.disclaimer_label.configure(
+            text='''Disclaimer: This app was designed\
+to support only Zebra printers.'''
+        )
 
-        self.start_button = tk.Button(self.PrinterSelectionCanvas, command=self.configure_printer)
-        self.start_button.place(relx=0.746, rely=0.333, height=22, width=125)
+        self.start_button = tk.Button(
+            self.PrinterSelectionCanvas,
+            command=self.configure_printer,
+        )
+        self.start_button.place(
+            relx=0.746,
+            rely=0.333,
+            height=22,
+            width=125,
+        )
         self.start_button.configure(activebackground="#d9d9d9")
         self.start_button.configure(activeforeground="#000000")
         self.start_button.configure(background="#d9d9d9")
@@ -119,7 +165,12 @@ class Application:
         self.start_button.configure(text='''Connect printer''')
 
         self.printer_id_label = tk.Label(self.PrinterSelectionCanvas)
-        self.printer_id_label.place(relx=0.797, rely=0.077, height=24, width=71)
+        self.printer_id_label.place(
+            relx=0.797,
+            rely=0.077,
+            height=24,
+            width=71,
+        )
         self.printer_id_label.configure(activebackground="#f9f9f9")
         self.printer_id_label.configure(activeforeground="black")
         self.printer_id_label.configure(background="#F8F7FA")
@@ -129,8 +180,12 @@ class Application:
         self.printer_id_label.configure(text='''Printer ID''')
 
         self.printer_id = tk.Text(self.PrinterSelectionCanvas)
-        self.printer_id.place(relx=0.746, rely=0.128, relheight=0.056
-                , relwidth=0.212)
+        self.printer_id.place(
+            relx=0.746,
+            rely=0.128,
+            relheight=0.056,
+            relwidth=0.212,
+        )
         self.printer_id.configure(background="white")
         self.printer_id.configure(font="TkTextFont")
         self.printer_id.configure(foreground="black")
@@ -143,8 +198,12 @@ class Application:
         self.printer_id.configure(wrap='word')
 
         self.printer_secret = tk.Text(self.PrinterSelectionCanvas)
-        self.printer_secret.place(relx=0.746, rely=0.244, relheight=0.056
-                , relwidth=0.212)
+        self.printer_secret.place(
+            relx=0.746,
+            rely=0.244,
+            relheight=0.056,
+            relwidth=0.212,
+        )
         self.printer_secret.configure(background="white")
         self.printer_secret.configure(font="TkTextFont")
         self.printer_secret.configure(foreground="black")
@@ -157,8 +216,12 @@ class Application:
         self.printer_secret.configure(wrap='word')
 
         self.printer_secret_label = tk.Label(self.PrinterSelectionCanvas)
-        self.printer_secret_label.place(relx=0.763, rely=0.205, height=14
-                , width=100)
+        self.printer_secret_label.place(
+            relx=0.763,
+            rely=0.205,
+            height=14,
+            width=100,
+        )
         self.printer_secret_label.configure(activebackground="#f9f9f9")
         self.printer_secret_label.configure(activeforeground="black")
         self.printer_secret_label.configure(background="#F8F7FA")
@@ -170,8 +233,12 @@ class Application:
         self.restore_connection_details()
 
         self.static_status_label = tk.Label(self.PrinterSelectionCanvas)
-        self.static_status_label.place(relx=0.814, rely=0.41, height=30
-                , width=52)
+        self.static_status_label.place(
+            relx=0.814,
+            rely=0.41,
+            height=30,
+            width=52,
+        )
         self.static_status_label.configure(activebackground="#f9f9f9")
         self.static_status_label.configure(activeforeground="black")
         self.static_status_label.configure(background="#F8F7FA")
@@ -189,21 +256,15 @@ class Application:
         self.status_label.configure(foreground="#000000")
         self.status_label.configure(highlightbackground="#d9d9d9")
         self.status_label.configure(highlightcolor="black")
-        self.status_label.configure(text='''Booming''')
-
-        self.log_label = tk.Label(self.PrinterSelectionCanvas)
-        self.log_label.place(relx=0.034, rely=0.564, height=144, width=415)
-        self.log_label.configure(activebackground="#f9f9f9")
-        self.log_label.configure(activeforeground="black")
-        self.log_label.configure(background="#ffffff")
-        self.log_label.configure(foreground="#000000")
-        self.log_label.configure(highlightbackground="#d9d9d9")
-        self.log_label.configure(highlightcolor="black")
-        self.log_label.configure(text='''Log''')
+        self.status_label.configure(text='''Disconnected''')
 
         self.refresh_printer_button = tk.Button(self.PrinterSelectionCanvas)
-        self.refresh_printer_button.place(relx=0.110, rely=0.154, height=22
-                , width=80)
+        self.refresh_printer_button.place(
+            relx=0.110,
+            rely=0.154,
+            height=22,
+            width=80,
+        )
         self.refresh_printer_button.configure(activebackground="#F8F7FA")
         self.refresh_printer_button.configure(activeforeground="#F8F7FA")
         self.refresh_printer_button.configure(background="#F8F7FA")
@@ -211,19 +272,54 @@ class Application:
         self.refresh_printer_button.configure(highlightbackground="#d9d9d9")
         self.refresh_printer_button.configure(highlightcolor="black")
         self.refresh_printer_button.configure(text='''Refresh''')
-        self.refresh_printer_button.configure(command=self.refresh_radio_buttons)
+        self.refresh_printer_button.configure(
+            command=self.refresh_radio_buttons,
+        )
+
+        self.test_printer_button = tk.Button(self.PrinterSelectionCanvas)
+        self.test_printer_button.place(
+            relx=0.093,
+            rely=0.22,
+            height=22,
+            width=100,
+        )
+        self.test_printer_button.configure(activebackground="#F8F7FA")
+        self.test_printer_button.configure(activeforeground="#F8F7FA")
+        self.test_printer_button.configure(background="#F8F7FA")
+        self.test_printer_button.configure(foreground="#000000")
+        self.test_printer_button.configure(highlightbackground="#d9d9d9")
+        self.test_printer_button.configure(highlightcolor="black")
+        self.test_printer_button.configure(text='''Test Printer''')
+        self.test_printer_button.configure(command=self.test_printer)
 
     def configure_printer(self):
         self.save_connection_details()
+        self.printer_object.setqueue(self.selected_printer.get())
+
+    def test_printer(self):
+        self.printer_object.setqueue(self.selected_printer.get())
+        self.printer_object.output(badgesapp_support.ZEBRA_TEST_ZPL)
+        if self.selected_printer.get() == ('' or None):
+            self.log('Testing printer...')
+        else:
+            self.log('Please select a printer before testing.')
 
     def save_connection_details(self):
-        conn = {
-            "printer_id" : self.printer_id.get('1.0', tk.END).replace('\\n', ''),
-            "printer_secret" : self.printer_secret.get('1.0', tk.END).replace('\\n', ''),
-        }
-        file = open(r'config.pkl', 'wb')
-        pickle.dump(conn, file)
-        file.close()
+        if (
+            self.printer_id.get('1.0', tk.END) and
+                self.printer_id.get('1.0', tk.END) and
+                self.selected_printer) != '/n':
+            conn = {
+                "printer_id":
+                self.printer_id.get('1.0', tk.END).replace('\\n', ''),
+                "printer_secret":
+                self.printer_secret.get('1.0', tk.END).replace('\\n', ''),
+                "printer_name":
+                self.selected_printer.get()
+            }
+            file = open(r'config.pkl', 'wb')
+            pickle.dump(conn, file)
+            file.close()
 
     def get_connection_details(self):
         file = open(r'config.pkl', 'rb')
@@ -236,13 +332,22 @@ class Application:
             conn = self.get_connection_details()
             self.printer_id.insert(tk.END, conn.get('printer_id'))
             self.printer_secret.insert(tk.END, conn.get('printer_secret'))
+            self.selected_printer.set(conn.get('printer_name', ''))
+            self.log('Connection details were successfully loaded.')
         except Exception:
-            print('Connection details could not be loaded')
+            self.log('No connection details could be loaded.')
 
     def refresh_radio_buttons(self):
         for button in self.printer_radio_buttons:
             button.destroy()
         self.populate_radio_buttons()
+        self.log('Refreshing printers...')
+
+    def log(self, text):
+        self.log_label.configure(state=tk.NORMAL)
+        self.wl.emit(text)
+        self.log_label.configure(state=tk.DISABLED)
+        self.log_label.see(tk.END)
 
     def populate_radio_buttons(self):
         it = 0
@@ -270,7 +375,16 @@ class Application:
             printer_radio_button.configure(value=p)
             printer_radio_button.configure(variable=self.selected_printer)
             self.printer_radio_buttons.append(printer_radio_button)
-            it += 0.10
+            it += 0.055
+
+
+class WidgetLogger(logging.Handler):
+    def __init__(self, widget):
+        logging.Handler.__init__(self)
+        self.widget = widget
+
+    def emit(self, record):
+        self.widget.insert(tk.INSERT, record + '\n')
 
 
 if __name__ == '__main__':

@@ -31,10 +31,15 @@ def destroy_window():
     top_level.destroy()
     top_level = None
 
+ZEBRA_TEST_ZPL = '^XA\
+^FO20,10^GB700,1,3^FS\
+^CFA,30\
+^AV,30,30^FO20,30^FD***Mercury Team***^FS\
+^AV,30,30^FO20,130^FD***Zebra Printer***^FS\
+^AV,30,30^FO20,230^FD***Connection Test***^FS\
+^FO20,330^GB700,1,3^FS\
+^XZ'
+
 if __name__ == '__main__':
     import badgesapp.py
     badgesapp.py.vp_start_gui()
-
-
-
-
