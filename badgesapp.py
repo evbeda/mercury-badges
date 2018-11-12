@@ -5,11 +5,12 @@
 #  in conjunction with Tcl version 8.6
 #    Nov 06, 2018 11:09:11 AM -03  platform: Darwin
 
-import sys
 from zebra import zebra
+import json
 import pickle
 import requests
 import logging
+from datetime import datetime
 try:
     import Tkinter as tk
 except ImportError:
@@ -23,6 +24,9 @@ except ImportError:
     py3 = True
 
 import badgesapp_support
+
+# Your API URL w/o backslash
+API_URL = 'https://eb.tems.com.ar/api'
 
 
 def vp_start_gui():
@@ -65,9 +69,9 @@ class Application:
            top is the toplevel containing window.'''
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
-        _compcolor = '#d9d9d9' # X11 color: 'gray85'
-        _ana1color = '#d9d9d9' # X11 color: 'gray85'
-        _ana2color = '#d9d9d9' # X11 color: 'gray85'
+        _compcolor = '#d9d9d9'  # X11 color: 'gray85'
+        _ana1color = '#d9d9d9'  # X11 color: 'gray85'
+        _ana2color = '#d9d9d9'  # X11 color: 'gray85'
         font10 = "-family {Helvetica Neue} -size 13 -weight bold -slant "  \
             "roman -underline 0 -overstrike 0"
         font11 = "-family {Helvetica Neue} -size 7 -weight normal "  \
@@ -151,7 +155,7 @@ to support only Zebra printers.'''
         )
         self.start_button.place(
             relx=0.746,
-            rely=0.333,
+            rely=0.233,
             height=22,
             width=125,
         )
@@ -197,45 +201,12 @@ to support only Zebra printers.'''
         self.printer_id.configure(width=108)
         self.printer_id.configure(wrap='word')
 
-        self.printer_secret = tk.Text(self.PrinterSelectionCanvas)
-        self.printer_secret.place(
-            relx=0.746,
-            rely=0.244,
-            relheight=0.056,
-            relwidth=0.212,
-        )
-        self.printer_secret.configure(background="white")
-        self.printer_secret.configure(font="TkTextFont")
-        self.printer_secret.configure(foreground="black")
-        self.printer_secret.configure(highlightbackground="#d9d9d9")
-        self.printer_secret.configure(highlightcolor="black")
-        self.printer_secret.configure(insertbackground="black")
-        self.printer_secret.configure(selectbackground="#c4c4c4")
-        self.printer_secret.configure(selectforeground="black")
-        self.printer_secret.configure(width=108)
-        self.printer_secret.configure(wrap='word')
-
-        self.printer_secret_label = tk.Label(self.PrinterSelectionCanvas)
-        self.printer_secret_label.place(
-            relx=0.763,
-            rely=0.205,
-            height=14,
-            width=100,
-        )
-        self.printer_secret_label.configure(activebackground="#f9f9f9")
-        self.printer_secret_label.configure(activeforeground="black")
-        self.printer_secret_label.configure(background="#F8F7FA")
-        self.printer_secret_label.configure(foreground="#000000")
-        self.printer_secret_label.configure(highlightbackground="#d9d9d9")
-        self.printer_secret_label.configure(highlightcolor="black")
-        self.printer_secret_label.configure(text='''Printer Secret''')
-
         self.restore_connection_details()
 
         self.static_status_label = tk.Label(self.PrinterSelectionCanvas)
         self.static_status_label.place(
-            relx=0.814,
-            rely=0.41,
+            relx=0.811,
+            rely=0.31,
             height=30,
             width=52,
         )
@@ -249,7 +220,7 @@ to support only Zebra printers.'''
         self.static_status_label.configure(text='''Status''')
 
         self.status_label = tk.Label(self.PrinterSelectionCanvas)
-        self.status_label.place(relx=0.78, rely=0.462, height=24, width=97)
+        self.status_label.place(relx=0.775, rely=0.362, height=24, width=97)
         self.status_label.configure(activebackground="#f9f9f9")
         self.status_label.configure(activeforeground="black")
         self.status_label.configure(background="#F8F7FA")
@@ -293,13 +264,95 @@ to support only Zebra printers.'''
         self.test_printer_button.configure(command=self.test_printer)
 
     def configure_printer(self):
-        self.save_connection_details()
         self.printer_object.setqueue(self.selected_printer.get())
+        if self.check_saved_settings():
+            self.connect_to_printer()
+        else:
+            self.setup_printer()
+            self.connect_to_printer()
+
+    def check_saved_settings(self):
+        try:
+            conn = self.get_connection_details()
+            if (conn['printer_id'] and conn['printer_secret'] and conn['printer_name']):
+                if conn['printer_id'] == self.printer_id.get('1.0', tk.END).replace('\n', ''):
+                    return True
+                else:
+                    return False
+        except Exception:
+            return False
+
+    def setup_printer(self):
+        url = '{}/printer/{}/configure/'.format(
+            API_URL,
+            self.printer_id.get('1.0', tk.END).replace('\n', '')
+        )
+        r = requests.get(url)
+        json_data = json.loads(r.text)
+        if json_data.get('secret_key'):
+            self.printer_secret_key = json_data.get('secret_key')
+            self.save_connection_details()
+            self.log(
+                'Successfully configured a new printer.'
+            )
+            self.log(
+                'Printer information has been saved.'
+            )
+        else:
+            self.log(
+                'Something went wrong while configuring the printer:\n\
+{}'.format(json_data.get('Error'))
+            )
+            self.log(
+                'Check on the mercury app online the printer settings.'
+            )
+
+    def connect_to_printer(self):
+        try:
+            self.status_label.configure(text='Ready')
+            self.print_from_queue()
+        except Exception as e:
+            self.log(
+                'Connection Error: {}'.format(e)
+            )
+
+    def print_from_queue(self):
+        queue = self.get_printer_jobs()
+        for job in queue:
+            self.printer_object.output(job['content'])
+            self.change_job_status(job['job_key'])
+
+    def change_job_status(self, job_id):
+        url = '{}/printer/{}/job/{}/'.format(
+            API_URL,
+            self.printer_id.get('1.0', tk.END).replace('\n', ''),
+            job_id,
+        )
+        re = requests.post(url, data={'secret_key': self.printer_secret_key})
+        return re.json()
+
+    def get_printer_jobs(self):
+        try:
+            url = '{}/printer/{}/queue/'.format(
+                API_URL,
+                self.printer_id.get('1.0', tk.END).replace('\n', '')
+            )
+            r = requests.get(
+                url,
+            )
+            self.log('Printing Queue @ {}'.format(
+                str(datetime.now())
+            ))
+            self.log(r.text)
+            return r.json()
+        except Exception as e:
+            self.log('Error trying to get the printing queue')
+            self.log(e)
 
     def test_printer(self):
-        self.printer_object.setqueue(self.selected_printer.get())
-        self.printer_object.output(badgesapp_support.ZEBRA_TEST_ZPL)
-        if self.selected_printer.get() == ('' or None):
+        if self.selected_printer.get() != ('' or None):
+            self.printer_object.setqueue(self.selected_printer.get())
+            self.printer_object.output(badgesapp_support.ZEBRA_TEST_ZPL)
             self.log('Testing printer...')
         else:
             self.log('Please select a printer before testing.')
@@ -311,9 +364,9 @@ to support only Zebra printers.'''
                 self.selected_printer) != '/n':
             conn = {
                 "printer_id":
-                self.printer_id.get('1.0', tk.END).replace('\\n', ''),
+                self.printer_id.get('1.0', tk.END).replace('\n', ''),
                 "printer_secret":
-                self.printer_secret.get('1.0', tk.END).replace('\\n', ''),
+                self.printer_secret_key,
                 "printer_name":
                 self.selected_printer.get()
             }
@@ -331,7 +384,7 @@ to support only Zebra printers.'''
         try:
             conn = self.get_connection_details()
             self.printer_id.insert(tk.END, conn.get('printer_id'))
-            self.printer_secret.insert(tk.END, conn.get('printer_secret'))
+            self.printer_secret_key = conn.get('printer_secret')
             self.selected_printer.set(conn.get('printer_name', ''))
             self.log('Connection details were successfully loaded.')
         except Exception:
