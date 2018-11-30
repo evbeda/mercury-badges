@@ -310,6 +310,7 @@ to support only Zebra printers.'''
     def connect_to_printer(self):
         try:
             self.status_label.configure(text='Ready')
+            import ipdb; ipdb.set_trace()
             self.print_from_queue()
         except Exception as e:
             self.log(
@@ -318,9 +319,13 @@ to support only Zebra printers.'''
 
     def print_from_queue(self):
         queue = self.get_printer_jobs()
-        for job in queue:
-            self.printer_object.output(job['content'])
-            self.change_job_status(job['job_key'])
+        if type(queue) is list:
+            if len(queue) > 0:
+                for job in queue:
+                    self.printer_object.output(job['content'])
+                    self.change_job_status(job['job_key'])
+            else:
+                self.log('Queue is empty')
 
     def change_job_status(self, job_id):
         url = '{}/printer/{}/job/{}/'.format(
@@ -337,14 +342,18 @@ to support only Zebra printers.'''
                 API_URL,
                 self.printer_id.get('1.0', tk.END).replace('\n', '')
             )
-            r = requests.get(
+            req = requests.get(
                 url,
             )
             self.log('Printing Queue @ {}'.format(
                 str(datetime.now())
             ))
-            self.log(r.text)
-            return r.json()
+            if req.json() is dict:
+                self.log('Error: {}'.format(req.json()['Error']))
+            else:
+                for job in req.json():
+                    self.log('Sending {} to local queue'.format(job['job_key']))
+            return req.json()
         except Exception as e:
             self.log('Error trying to get the printing queue')
             self.log(e)
