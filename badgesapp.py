@@ -310,7 +310,6 @@ to support only Zebra printers.'''
     def connect_to_printer(self):
         try:
             self.status_label.configure(text='Ready')
-            import ipdb; ipdb.set_trace()
             self.print_from_queue()
         except Exception as e:
             self.log(
