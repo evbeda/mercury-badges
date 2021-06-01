@@ -18,7 +18,7 @@ Pygments==2.2.0
 requests==2.20.0
 six==1.11.0
 traitlets==4.3.2
-urllib3==1.24.1
+urllib3==1.26.5
 wcwidth==0.1.7
 zebra==0.0.5
 zpl==0.1
